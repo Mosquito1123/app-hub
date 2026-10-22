@@ -1,0 +1,19 @@
+node_modules/
+dist/
+build/
+coverage/
+*.local
+.DS_Store
+*.log
+pnpm-debug.log*
+
+# runtime data
+uploads/
+data/
+*.sqlite
+*.sqlite-*
+
+# env
+.env
+.env.*
+!.env.example

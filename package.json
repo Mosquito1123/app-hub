@@ -1,0 +1,18 @@
+{
+  "name": "apphub",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Self-hosted app distribution platform (like pgyer) for iOS / Android / HarmonyOS",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"pnpm --filter @apphub/api dev\" \"pnpm --filter @apphub/web dev\"",
+    "build": "pnpm -r build",
+    "start": "pnpm --filter @apphub/api start:prod"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
