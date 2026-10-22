@@ -34,10 +34,10 @@
 | 阶段 | 负责 | 内容 | 状态 |
 | --- | --- | --- | --- |
 | M0 脚手架 | 本人 | git init、workspace、README、API 契约 | ✅ |
-| M1 后端 | Agent B | NestJS 全部 API + 认证 + 上传 + 下载 | ⏳ |
-| M1 前端 | Agent C | Vue3 全部页面（与后端并行） | ⏳ |
-| M2 集成 | Agent D | pnpm install、构建、启动、冒烟测试、修问题 | ⏳ |
-| M3 收尾 | 本人 | 验收、截图、初始 commit | ⏳ |
+| M1 后端 | Agent B | NestJS 全部 API + 认证 + 上传 + 下载 | ✅ |
+| M1 前端 | Agent C | Vue3 全部页面（与后端并行） | ✅ |
+| M2 集成 | 本人 + Agent D | pnpm install、构建、API 冒烟 28/28、浏览器端到端验证 | ✅ |
+| M3 收尾 | 本人 | 修复 SPA 首页 404 bug、截图、commit | ✅ |
 
 ## 约定
 
