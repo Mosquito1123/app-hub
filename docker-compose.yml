@@ -1,0 +1,27 @@
+services:
+  apphub:
+    build: .
+    image: apphub:latest
+    ports:
+      - '3000:3000'
+    environment:
+      # 生产环境务必覆盖！
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      ## S3 存储（STORAGE_DRIVER=s3 时启用）
+      # S3_ENDPOINT: https://s3.example.com
+      # S3_REGION: us-east-1
+      # S3_BUCKET: apphub
+      # S3_ACCESS_KEY: xxx
+      # S3_SECRET_KEY: xxx
+      # S3_PUBLIC_BASE_URL: https://cdn.example.com
+    volumes:
+      - apphub-data:/app/apps/api/data      # sqlite 数据库
+      - apphub-uploads:/app/apps/api/uploads # 本地模式的上传文件
+    restart: unless-stopped
+
+volumes:
+  apphub-data:
+  apphub-uploads:

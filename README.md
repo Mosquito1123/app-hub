@@ -46,6 +46,20 @@ apphub/
 └── PLAN.md           # 项目计划
 ```
 
+## Docker 部署
+
+```bash
+# 构建并启动（数据/上传自动挂卷持久化）
+JWT_SECRET=your-secret ADMIN_PASSWORD=strong-password docker compose up -d --build
+
+# 浏览器打开 http://localhost:3000
+```
+
+- 单容器同时提供 API + 前端静态资源（main.ts 自动托管 `apps/web/dist`）
+- 持久化：`apphub-data`（SQLite）+ `apphub-uploads`（本地模式上传文件）
+- S3 存储：设 `STORAGE_DRIVER=s3` 并填 `S3_*` 变量（见 docker-compose.yml 注释）
+- ⚠️ 本仓库编写时本机无 Docker，镜像未实机构建验证；如有构建问题请反馈
+
 ## 环境变量（api）
 
 | 变量 | 默认值 | 说明 |
@@ -56,3 +70,7 @@ apphub/
 | `ADMIN_USERNAME` | `admin` | 初始管理员 |
 | `ADMIN_PASSWORD` | `admin123` | 初始密码 |
 | `JWT_SECRET` | `apphub-dev-secret` | JWT 密钥（生产必改） |
+| `STORAGE_DRIVER` | `local` | 存储驱动：`local` \| `s3` |
+| `S3_ENDPOINT` / `S3_REGION` / `S3_BUCKET` | — | S3 存储配置（`STORAGE_DRIVER=s3` 时必填） |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | — | S3 凭据 |
+| `S3_PUBLIC_BASE_URL` | — | 可选，S3/CDN 公开访问域名 |
