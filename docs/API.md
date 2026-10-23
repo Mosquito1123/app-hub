@@ -40,6 +40,7 @@ interface AppItem {
   description: string | null
   iconUrl: string | null     // 相对路径：`/uploads/icons/xxx.png`，无图标为 null
   shareId: string            // 6 位短链 ID，如 "a1b2c3"
+  shareProtected: boolean    // v2：是否设置了分享密码（密码值永不出接口）
   createdAt: string
   updatedAt: string
   buildCount: number         // 版本总数
@@ -129,3 +130,60 @@ multipart：
 | `/` | 应用列表 | 搜索框 + 平台筛选 + 新建应用按钮 |
 | `/apps/:id` | 应用详情 | 基本信息 + 上传构建 + 版本历史表格 |
 | `/d/:shareId` | 公开分发页 | 手机优先，公开访问，无需登录 |
+
+---
+
+# v2 增量契约
+
+## 应用编辑 + 分享密码
+
+### PATCH `/api/apps/:id`（v2 扩展）
+请求：`{ name?: string, description?: string, sharePassword?: string }`
+- `sharePassword`：非空字符串 = 设置分享密码（明文比对即可，密码值**任何接口都不回传**）；空字符串 `""` = 清除密码
+- 响应：`AppItem`
+
+### AppItem 新增 `shareProtected: boolean`（已加入上方类型定义）
+
+## 公开端点密码保护（v2）
+
+三个公开接口都接受可选查询参数 `password`：
+- `GET /api/public/apps/:shareId?password=xxx`
+- `GET /api/public/builds/:buildId/download?password=xxx`
+- `GET /api/public/builds/:buildId/ios-manifest.plist?password=xxx`
+
+规则：
+- 应用未设密码：`password` 可省略，行为与 v1 完全一致
+- 应用设了密码且 `password` 缺失/错误：返回 **403** `{ statusCode: 403 }`
+- 正常：响应与 v1 完全一致
+- 前端约定：受保护应用的下载链接、二维码 URL 追加 `?password=`；分享链接本身不含密码（密码另行告知）
+
+## 下载统计（v2）
+
+新增 `DownloadLog` 表（每次下载成功流式响应前插入一行）：
+- 字段：id、appId、buildId、platform、createdAt
+- 下载接口行为不变，只是多记一行
+
+### GET `/api/apps/:id/stats`（需登录）
+响应：
+```ts
+{
+  total: number,                              // 该应用累计下载
+  byPlatform: { android: number, ios: number, harmony: number },
+  daily: Array<{ date: string, count: number }>  // 最近 30 天（含今天）升序，无下载日 count:0，date 形如 "2026-10-23"
+}
+```
+
+## 存储驱动（v2，S3 可选）
+
+- 环境变量 `STORAGE_DRIVER`：`local`（默认）| `s3`
+- S3 变量：`S3_ENDPOINT`、`S3_REGION`、`S3_BUCKET`、`S3_ACCESS_KEY`、`S3_SECRET_KEY`、`S3_PUBLIC_BASE_URL`（可选，CDN/公开域名）
+- 行为：
+  - `local`：与 v1 完全一致（磁盘存 `<UPLOAD_DIR>/app-builds|icons/`，下载走流式）
+  - `s3`：上传落盘后转存 S3 并删除本地临时文件（图标同理）；下载接口 **302 重定向**到预签名 URL（计数照常 +1）；删除时同步删 S3 对象
+- 依赖：`@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`（**只在 STORAGE_DRIVER 代码路径用**，local 模式不连网）
+- 实现建议：一个 `StorageService`（save(localPath, key) / delete(key) / getDownloadResponse(key)），apps/builds/public 模块都走它
+
+## 图标上传前端入口（v1 接口已存在，v2 补 UI）
+
+`POST /api/apps/:id/icon`（multipart `file`，≤2MB png/jpg/jpeg/svg）→ `{ iconUrl }`
+
