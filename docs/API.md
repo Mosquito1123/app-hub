@@ -187,3 +187,89 @@ multipart：
 
 `POST /api/apps/:id/icon`（multipart `file`，≤2MB png/jpg/jpeg/svg）→ `{ iconUrl }`
 
+---
+
+# v3 增量契约（账号管理系统，参考 pgyer 模式）
+
+## 模式决策（已确认）
+- **开放注册**（带运维开关 `REGISTER_ENABLED`，默认开）
+- **两角色**：`admin`（管账号 + 全部应用权限）/ `member`（应用平权，不能管账号）
+- **应用全员共享**：应用无归属隔离，仅留痕显示创建者
+
+## 类型新增
+
+```ts
+interface UserMe {                // GET /api/auth/me 升级（向后兼容原 User）
+  id: number
+  username: string
+  role: 'admin' | 'member'
+}
+
+interface UserAdmin {             // 用户管理列表项
+  id: number
+  username: string
+  role: 'admin' | 'member'
+  disabled: boolean
+  createdAt: string
+}
+
+// AppItem 与 Build 各新增留痕字段（老数据为 null）
+createdBy: string | null          // 创建时的用户名快照
+```
+
+## 认证（v3 扩展）
+
+### GET `/api/auth/config` (public)
+响应：`{ registerEnabled: boolean }`（前端决定是否显示注册入口）
+
+### POST `/api/auth/register` (public)
+请求：`{ username: string, password: string }`
+- 规则：username 3-20 位（字母/数字/下划线/中文）；password 6-20 位
+- 新用户 `role: 'member'`
+响应：`{ token: string, user: UserMe }`（注册即登录）
+错误：400 参数不合法；409 用户名已存在；**403 注册开关已关闭**
+
+### POST `/api/auth/login`（响应升级）
+响应：`{ token, user: UserMe }`（多带 `role`，前端路由按角色控制入口）
+错误：401 凭据错误；**403 账号已被禁用**
+
+### POST `/api/auth/change-password`（需登录，两角色均可）
+请求：`{ oldPassword: string, newPassword: string }`
+响应：204
+错误：401 未登录；400 旧密码错误/新密码不合法
+
+## 用户管理（v3，仅 admin；403 给非 admin）
+
+### GET `/api/users`
+响应：`UserAdmin[]`（按 createdAt 升序，含当前用户自己）
+
+### POST `/api/users`（admin 直接添加）
+请求：`{ username, password, role?: 'admin' | 'member' }`（role 默认 member）
+响应：`UserAdmin`（201）；错误：400/409
+
+### PATCH `/api/users/:id`
+请求：`{ role?: 'admin' | 'member', disabled?: boolean, newPassword?: string }`（至少一个）
+响应：`UserAdmin`
+保护规则：**不能修改自己的 role 和 disabled**（400）；`newPassword` 为管理员重置密码
+错误：404 用户不存在
+
+### DELETE `/api/users/:id`
+响应：204
+保护规则：**不能删除自己**（400）
+
+## 守卫
+- `@Roles('admin')` 装饰器 + RolesGuard：`/api/users*` 全部要求 admin
+- 其余登录接口两角色均可
+
+## 下载页补充（参考 pgyer 展示项，前端本地补充即可，无新接口）
+- 展示文件大小（Build.fileSize 已有，格式化 MB）
+- "或者用手机扫描二维码安装"引导文案（桌面）
+- 底部风险提示小字（参考 pgyer 免责声明，一句话即可）
+
+## 前端路由（v3 新增）
+
+| 路由 | 页面 | 说明 |
+| --- | --- | --- |
+| `/login` | 登录/注册 | 参考 pgyer 左右分栏：左品牌区右表单，底部"还没有账号？去注册"切换 |
+| `/users` | 用户管理 | **仅 admin 可见/可访**，member 访问显示 403 无权限提示 |
+
