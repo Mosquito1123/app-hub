@@ -25,6 +25,8 @@ pnpm start
 
 默认管理员账号：`admin` / `admin123`（可用环境变量 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 覆盖）。
 
+开放注册默认开启（新用户为 `member`）。设 `REGISTER_ENABLED=0` 关闭注册入口与 `POST /api/auth/register`。`admin` 可在「用户」页管理账号；应用对所有登录用户共享，只记录创建者用户名。
+
 ## 核心功能
 
 - 📦 应用管理：创建应用、图标、描述、平台筛选、搜索
@@ -33,7 +35,7 @@ pnpm start
   - Android：直接下载 APK 安装
   - iOS：itms-services 安装引导 + 下载
   - 鸿蒙：.hap 下载 + 安装说明
-- 🔐 简单认证：JWT 登录，上传/管理需登录，下载页公开
+- 🔐 账号：JWT 登录 / 开放注册（可关）、`admin` 与 `member` 两角色、管理员用户页；上传与管理需登录，下载页公开
 
 ## 目录结构
 
@@ -70,6 +72,7 @@ JWT_SECRET=your-secret ADMIN_PASSWORD=strong-password docker compose up -d --bui
 | `ADMIN_USERNAME` | `admin` | 初始管理员 |
 | `ADMIN_PASSWORD` | `admin123` | 初始密码 |
 | `JWT_SECRET` | `apphub-dev-secret` | JWT 密钥（生产必改） |
+| `REGISTER_ENABLED` | `1`（开启） | 开放注册。`0` / `false` / `off` / `no` 关闭；关闭后注册接口返回 403，登录页不显示注册入口 |
 | `STORAGE_DRIVER` | `local` | 存储驱动：`local` \| `s3` |
 | `S3_ENDPOINT` / `S3_REGION` / `S3_BUCKET` | — | S3 存储配置（`STORAGE_DRIVER=s3` 时必填） |
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | — | S3 凭据 |

@@ -57,6 +57,7 @@ export class PublicController {
         iconUrl: iconUrl ?? null,
         shareId,
         shareProtected: (app.sharePassword ?? '') !== '',
+        createdBy: app.createdBy ?? null,
         createdAt: iso(createdAt),
         updatedAt: iso(updatedAt),
       },

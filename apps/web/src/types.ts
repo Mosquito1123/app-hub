@@ -2,9 +2,30 @@
 
 export type Platform = 'ios' | 'android' | 'harmony'
 
+export type Role = 'admin' | 'member'
+
 export interface User {
   id: number
   username: string
+}
+
+/** GET /api/auth/me 与登录/注册响应（v3） */
+export interface UserMe extends User {
+  role: Role
+}
+
+/** 用户管理列表项（v3，仅 admin） */
+export interface UserAdmin {
+  id: number
+  username: string
+  role: Role
+  disabled: boolean
+  createdAt: string
+}
+
+/** GET /api/auth/config（public） */
+export interface AuthConfig {
+  registerEnabled: boolean
 }
 
 export interface Build {
@@ -19,6 +40,7 @@ export interface Build {
   fileExt: string
   fileSize: number
   downloadCount: number
+  createdBy: string | null // v3：上传者用户名快照，老数据为 null
   createdAt: string
   downloadUrl: string // 相对路径：/api/public/builds/${id}/download
 }
@@ -31,6 +53,7 @@ export interface AppItem {
   iconUrl: string | null // 相对路径：/uploads/icons/xxx.png
   shareId: string
   shareProtected: boolean // v2：是否设置了分享密码（密码值永不出接口）
+  createdBy: string | null // v3：创建者用户名快照，老数据为 null
   createdAt: string
   updatedAt: string
   buildCount: number
@@ -49,7 +72,7 @@ export interface PublicApp {
 
 export interface LoginResponse {
   token: string
-  user: User
+  user: UserMe
 }
 
 export interface AppStats {

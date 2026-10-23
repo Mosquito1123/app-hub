@@ -21,6 +21,13 @@ const router = createRouter({
       component: () => import('@/views/AppDetailView.vue'),
     },
     {
+      path: '/users',
+      name: 'users',
+      component: () => import('@/views/UsersView.vue'),
+      // 仅 admin 展示管理功能；member 进入页面后看到 403，不重定向
+      meta: { admin: true },
+    },
+    {
       path: '/d/:shareId',
       name: 'download',
       component: () => import('@/views/DownloadView.vue'),
@@ -30,10 +37,18 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
-  if (to.meta.public) return true
+  if (to.meta.public) {
+    if (to.path === '/login' && auth.token) return '/'
+    return true
+  }
   if (!auth.token) return { path: '/login', query: { redirect: to.fullPath } }
+  try {
+    await auth.ensureRole()
+  } catch {
+    if (!auth.token) return { path: '/login', query: { redirect: to.fullPath } }
+  }
   if (to.path === '/login') return '/'
   return true
 })

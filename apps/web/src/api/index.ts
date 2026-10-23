@@ -4,15 +4,64 @@ import type {
   AppDetail,
   AppItem,
   AppStats,
+  AuthConfig,
   Build,
   LoginResponse,
   Platform,
   PublicApp,
+  Role,
+  UserAdmin,
+  UserMe,
 } from '@/types'
+
+export async function getAuthConfig(): Promise<AuthConfig> {
+  const { data } = await client.get<AuthConfig>('/auth/config')
+  return data
+}
 
 export async function login(username: string, password: string): Promise<LoginResponse> {
   const { data } = await client.post<LoginResponse>('/auth/login', { username, password })
   return data
+}
+
+export async function register(username: string, password: string): Promise<LoginResponse> {
+  const { data } = await client.post<LoginResponse>('/auth/register', { username, password })
+  return data
+}
+
+export async function fetchMe(): Promise<UserMe> {
+  const { data } = await client.get<UserMe>('/auth/me')
+  return data
+}
+
+export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
+  await client.post('/auth/change-password', { oldPassword, newPassword })
+}
+
+export async function listUsers(): Promise<UserAdmin[]> {
+  const { data } = await client.get<UserAdmin[]>('/users')
+  return data
+}
+
+export async function createUser(payload: {
+  username: string
+  password: string
+  role?: Role
+}): Promise<UserAdmin> {
+  const { data } = await client.post<UserAdmin>('/users', payload)
+  return data
+}
+
+export async function updateUser(
+  id: number,
+  payload: { role?: Role; disabled?: boolean; newPassword?: string },
+): Promise<UserAdmin> {
+  const { data } = await client.patch<UserAdmin>(`/users/${id}`, payload)
+  return data
+}
+
+export async function deleteUser(id: number): Promise<void> {
+  await client.delete(`/users/${id}`)
 }
 
 export async function fetchApps(params: { q?: string; platform?: Platform } = {}): Promise<AppItem[]> {

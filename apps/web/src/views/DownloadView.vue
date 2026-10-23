@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { fetchPublicApp } from '@/api'
-import { absoluteUrl, formatDate, platformMeta } from '@/lib/utils'
+import { absoluteUrl, formatBytes, formatDate, platformMeta } from '@/lib/utils'
 import type { Build, PublicApp } from '@/types'
 
 const route = useRoute()
@@ -161,7 +161,8 @@ function itmsUrl(b: Build) {
               </span>
             </div>
             <p class="mt-1 text-xs text-muted-foreground">
-              {{ formatDate(latest.createdAt) }} · {{ latest.downloadCount }} 次下载
+              {{ formatDate(latest.createdAt) }} · {{ formatBytes(latest.fileSize) }} ·
+              {{ latest.downloadCount }} 次下载
             </p>
 
             <div
@@ -232,7 +233,7 @@ function itmsUrl(b: Build) {
                 height="136"
                 alt="扫码访问"
               />
-              <p class="text-sm text-muted-foreground">手机扫码安装</p>
+              <p class="text-sm text-muted-foreground">或者用手机扫描二维码安装</p>
             </div>
           </CardContent>
         </Card>
@@ -258,7 +259,8 @@ function itmsUrl(b: Build) {
                     </span>
                   </p>
                   <p class="text-xs text-muted-foreground">
-                    {{ formatDate(b.createdAt) }} · {{ b.downloadCount }} 次下载
+                    {{ formatDate(b.createdAt) }} · {{ formatBytes(b.fileSize) }} ·
+                    {{ b.downloadCount }} 次下载
                   </p>
                 </div>
                 <Button variant="outline" size="sm" as-child>
@@ -272,7 +274,10 @@ function itmsUrl(b: Build) {
           </CardContent>
         </Card>
 
-        <p class="mt-8 text-center text-xs text-muted-foreground">Powered by AppHub</p>
+        <p class="mt-8 text-center text-xs leading-relaxed text-muted-foreground">
+          本应用由分享者上传，仅供内测。请确认来源后再安装，下载与使用风险由您自行承担。
+        </p>
+        <p class="mt-2 text-center text-xs text-muted-foreground">Powered by AppHub</p>
       </template>
     </div>
   </div>

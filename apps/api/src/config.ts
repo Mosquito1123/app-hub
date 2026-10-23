@@ -11,6 +11,10 @@ export const STORAGE_DRIVER: 'local' | 's3' = process.env.STORAGE_DRIVER === 's3
 export const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin'
 export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
 export const JWT_SECRET = process.env.JWT_SECRET || 'apphub-dev-secret'
+// v3：开放注册开关，默认开。0 / false / off / no 表示关闭
+export const REGISTER_ENABLED = !['0', 'false', 'off', 'no'].includes(
+  (process.env.REGISTER_ENABLED ?? '1').trim().toLowerCase(),
+)
 
 // 自动建目录（数据库文件目录 + 上传目录）
 fs.mkdirSync(path.dirname(DB_FILE), { recursive: true })

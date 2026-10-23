@@ -35,6 +35,10 @@ export class App {
   @Column({ type: 'text', nullable: true })
   sharePassword: string | null
 
+  // v3：创建者用户名快照（应用全员共享，只留痕；null = 旧数据）
+  @Column({ type: 'text', nullable: true })
+  createdBy: string | null
+
   @CreateDateColumn()
   createdAt: Date
 

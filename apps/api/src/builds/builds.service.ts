@@ -31,6 +31,7 @@ export class BuildsService {
       channel?: string
       releaseNotes?: string
     },
+    createdBy?: string,
   ) {
     const app = await this.apps.findOne({ where: { id: appId } })
     if (!app) {
@@ -60,6 +61,7 @@ export class BuildsService {
         fileExt: getFileExt(file.originalname),
         fileSize: file.size,
         storedName,
+        createdBy: createdBy || null,
       }),
     )
     return buildToDto(build)
