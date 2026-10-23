@@ -104,15 +104,19 @@ export class AppsService {
     return appToItem(await this.loadWithBuilds(id))
   }
 
-  // v2：下载统计（基于 DownloadLog；daily 为最近 30 天含今天，升序补零）
+  // v2：下载统计。total/byPlatform 基于 build.downloadCount（含 v1 时代的历史下载，当时无日志表）；
+  // daily 基于 DownloadLog（新表，自 v2 启用起逐次记录）
   async stats(id: number) {
-    const app = await this.apps.findOne({ where: { id } })
-    if (!app) throw new NotFoundException('应用不存在')
-    const logs = await this.downloadLogs.find({ where: { appId: id } })
+    const app = await this.loadWithBuilds(id)
     const byPlatform = { android: 0, ios: 0, harmony: 0 }
+    let total = 0
+    for (const b of app.builds ?? []) {
+      total += b.downloadCount
+      if (b.platform in byPlatform) byPlatform[b.platform] += b.downloadCount
+    }
+    const logs = await this.downloadLogs.find({ where: { appId: id } })
     const dailyCount = new Map<string, number>()
     for (const log of logs) {
-      if (log.platform in byPlatform) byPlatform[log.platform] += 1
       const date = ymd(log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt))
       dailyCount.set(date, (dailyCount.get(date) ?? 0) + 1)
     }
@@ -122,7 +126,7 @@ export class AppsService {
       const date = ymd(new Date(now.getTime() - i * 24 * 60 * 60 * 1000))
       daily.push({ date, count: dailyCount.get(date) ?? 0 })
     }
-    return { total: logs.length, byPlatform, daily }
+    return { total, byPlatform, daily }
   }
 
   async remove(id: number) {
