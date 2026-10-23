@@ -6,6 +6,7 @@ import { AuthService } from './auth/auth.service'
 import { AppsModule } from './apps/apps.module'
 import { BuildsModule } from './builds/builds.module'
 import { PublicModule } from './public/public.module'
+import { UsersModule } from './users/users.module'
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PublicModule } from './public/public.module'
     AppsModule,
     BuildsModule,
     PublicModule,
+    UsersModule,
   ],
 })
 export class AppModule implements OnModuleInit {

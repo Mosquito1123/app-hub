@@ -2,6 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Download, LoaderCircle, Package, Plus } from 'lucide-vue-next'
+import AppHeader from '@/components/AppHeader.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,11 +20,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { createApp, fetchApps } from '@/api'
 import { formatDate } from '@/lib/utils'
 import { useToast } from '@/composables/useToast'
-import { useAuthStore } from '@/stores/auth'
 import type { AppItem, Platform } from '@/types'
 
 const router = useRouter()
-const auth = useAuthStore()
 const { toast } = useToast()
 
 const apps = ref<AppItem[]>([])
@@ -59,11 +58,6 @@ async function load() {
   } finally {
     loading.value = false
   }
-}
-
-function onLogout() {
-  auth.logout()
-  router.replace('/login')
 }
 
 // 新建应用
@@ -104,18 +98,7 @@ async function submitCreate() {
 
 <template>
   <div class="min-h-screen">
-    <header class="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-      <div class="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <div class="flex items-center gap-2 text-lg font-bold">
-          <Package class="h-5 w-5 text-primary" />
-          AppHub
-        </div>
-        <div class="flex items-center gap-2 text-sm">
-          <span class="text-muted-foreground">{{ auth.user?.username }}</span>
-          <Button variant="ghost" size="sm" @click="onLogout">退出</Button>
-        </div>
-      </div>
-    </header>
+    <AppHeader />
 
     <main class="mx-auto max-w-5xl px-4 py-8">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -203,13 +186,14 @@ async function submitCreate() {
             </div>
           </div>
           <div
-            class="mt-4 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground"
+            class="mt-4 flex items-center justify-between gap-3 border-t pt-3 text-xs text-muted-foreground"
           >
-            <span class="inline-flex items-center gap-1">
+            <span class="inline-flex shrink-0 items-center gap-1">
               <Download class="h-3.5 w-3.5" />
               {{ app.downloadCount }} 次下载
             </span>
-            <span>{{ formatDate(app.updatedAt) }}</span>
+            <span v-if="app.createdBy" class="min-w-0 truncate">创建者 {{ app.createdBy }}</span>
+            <span class="shrink-0">{{ formatDate(app.updatedAt) }}</span>
           </div>
         </button>
       </div>

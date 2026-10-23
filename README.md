@@ -17,7 +17,7 @@
 - 图标：png / jpg / jpeg / svg，最大 2MB
 - 存储：默认本地磁盘；可切换到 S3 兼容对象存储
 - 部署：pnpm 脚本，或单容器 Docker Compose（API 同时托管前端构建产物）
-- 登录：JWT。上传和管理需要登录，下载页公开。令牌有效期 7 天
+- 账号：JWT 登录，开放注册（可用 `REGISTER_ENABLED` 关闭）。`admin` 管理用户，`member` 与管理员一样管理应用。应用全员共享，只记录创建者用户名。上传和管理需要登录，下载页公开。令牌有效期 7 天
 
 ## 技术栈
 
@@ -31,13 +31,13 @@ pnpm workspace monorepo（Node.js ≥ 20，`packageManager` 为 `pnpm@9.15.9`）
 
 ## 当前状态
 
-以代码为准。`PLAN.md` 里程碑表把 v2 标成完成；文首「非目标（v2 再做）」仍是初版范围，其中分享密码、下载统计、S3 和 Docker 已经实现。阅读进度时以本节为准。
+以代码为准。`PLAN.md` 里程碑表里 v2 与 v3 均已完成；文首「非目标（v2 再做）」仍是初版范围，其中分享密码、下载统计、S3、Docker 以及多用户账号已经实现。阅读进度时以本节为准。
 
 | 阶段 | 状态 |
 | --- | --- |
-| v0.1 分发闭环 | 已实现：应用、构建上传、公开二维码页、JWT 单管理员、SQLite、本地存储 |
+| v0.1 分发闭环 | 已实现：应用、构建上传、公开二维码页、JWT 登录、SQLite、本地存储 |
 | v2 | 已实现：图标与应用编辑、分享密码、下载统计、S3、Docker |
-| v3 账号系统 | **仅契约**，写在 [`docs/API.md`](docs/API.md) 后半部分：开放注册、`REGISTER_ENABLED`、`admin` / `member`、用户管理页。注册接口、角色字段和 `UsersView` 都还没有 |
+| v3 账号系统 | 已实现：开放注册（`REGISTER_ENABLED`，默认开）、`admin` / `member`、`/users` 用户管理、修改密码、禁用账号、`createdBy` 留痕。应用全员共享 |
 
 接口以 [`docs/API.md`](docs/API.md) 为唯一契约。项目范围的历史记录见 [`PLAN.md`](PLAN.md)，变更记录见 [`CHANGELOG.md`](CHANGELOG.md)。
 
@@ -60,6 +60,8 @@ pnpm start
 
 用户表为空时，API 启动会写入一名管理员，默认 `admin` / `admin123`。可用 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 覆盖**这一次**创建。库里已经有用户之后，再改这两个变量不会改密码。
 
+开放注册默认开启，新用户角色为 `member`。设 `REGISTER_ENABLED=0`（或 `false` / `off` / `no`）关闭注册入口和 `POST /api/auth/register`。`admin` 在「用户」页管理账号。
+
 API 进程（`pnpm dev` 中的 api，以及 `pnpm start`）的工作目录是 `apps/api`，所以默认数据库是 `apps/api/data/apphub.sqlite`，上传目录是 `apps/api/uploads`。
 
 ## Docker Compose
@@ -75,7 +77,7 @@ docker compose up -d --build
 
 - 一个容器同时提供 API 和前端静态文件（`apps/api/src/main.ts` 在存在 `apps/web/dist/index.html` 时托管它）
 - 卷：`apphub-data` → 容器内 `apps/api/data`（SQLite），`apphub-uploads` → `apps/api/uploads`
-- Compose 会把根目录 `.env` 用于变量替换。进入容器的只有 `docker-compose.yml` 里写明的项：`JWT_SECRET`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`、`STORAGE_DRIVER`，以及取消注释后的 `S3_*`
+- Compose 会把根目录 `.env` 用于变量替换。进入容器的只有 `docker-compose.yml` 里写明的项：`JWT_SECRET`、`ADMIN_USERNAME`、`ADMIN_PASSWORD`、`REGISTER_ENABLED`、`STORAGE_DRIVER`，以及取消注释后的 `S3_*`
 - Compose 默认把 `JWT_SECRET` 设为 `change-me-in-production`（与代码里的开发默认值不同）。生产环境请换成足够长的随机字符串
 - 镜像定义在 `Dockerfile`。合入 Docker 时作者环境没有实际构建过该镜像；在目标机器上首次部署请先完成一次 `docker compose build`
 
@@ -97,7 +99,7 @@ S3：在 `.env` 中设置 `STORAGE_DRIVER=s3`，并在 `docker-compose.yml` 里�
 | `ADMIN_USERNAME` | `admin` | 仅当用户表为空时写入的管理员用户名 |
 | `ADMIN_PASSWORD` | `admin123` | 仅当用户表为空时写入的密码。生产必须修改。已有用户后改此变量不会更新密码 |
 | `JWT_SECRET` | `apphub-dev-secret` | JWT 签名密钥。生产必须修改 |
-| `REGISTER_ENABLED` | 契约默认开启；**代码未读取** | v3 文档里的开放注册开关。`config.ts` 目前没有这个变量，设置后没有效果 |
+| `REGISTER_ENABLED` | 开启 | 开放注册。未设置，或除 `0` / `false` / `off` / `no` 以外的值，均为开启。关闭后登录页不显示注册入口，`POST /api/auth/register` 返回 403。`config.ts` 会读取该变量 |
 | `STORAGE_DRIVER` | `local` | `local` 或 `s3`。只有值为 `s3` 时才读取下面的 `S3_*` 并连接存储 |
 | `S3_ENDPOINT` | 空 | S3 兼容端点。非空时客户端使用 path-style |
 | `S3_REGION` | `auto` | 区域，仅 s3 模式 |
@@ -112,7 +114,7 @@ S3：在 `.env` 中设置 `STORAGE_DRIVER=s3`，并在 `docker-compose.yml` 里�
 apphub/
 ├── apps/api/          # NestJS
 ├── apps/web/          # Vue 3
-├── docs/API.md        # 接口契约（含尚未实现的 v3）
+├── docs/API.md        # 接口契约
 ├── docs/screenshots/  # 界面截图
 ├── Dockerfile
 ├── docker-compose.yml
@@ -134,7 +136,7 @@ apphub/
 ## 相关文档
 
 - [docs/API.md](docs/API.md) — 前后端接口契约
-- [PLAN.md](PLAN.md) — 项目计划（可能滞后于 v2 / v3 的实际进度，见上文「当前状态」）
+- [PLAN.md](PLAN.md) — 项目计划（文首「非目标」是初版范围，进度以上文「当前状态」为准）
 - [CHANGELOG.md](CHANGELOG.md) — 更新日志
 - [CONTRIBUTING.md](CONTRIBUTING.md) — 如何在本地运行并提交改动
 - [LICENSE](LICENSE) — MIT

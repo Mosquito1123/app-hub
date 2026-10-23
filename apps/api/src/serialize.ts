@@ -1,5 +1,6 @@
 import { Build } from './entities/build.entity'
 import { App } from './entities/app.entity'
+import { User } from './entities/user.entity'
 
 // 时间转 ISO8601 字符串（TypeORM sqlite 读出来可能是 Date 或 string）
 function iso(v: Date | string): string {
@@ -19,6 +20,7 @@ export function buildToDto(build: Build) {
     fileExt: build.fileExt,
     fileSize: build.fileSize,
     downloadCount: build.downloadCount,
+    createdBy: build.createdBy ?? null,
     createdAt: iso(build.createdAt),
     downloadUrl: `/api/public/builds/${build.id}/download`,
   }
@@ -37,11 +39,22 @@ export function appToItem(app: App) {
     iconUrl: app.iconUrl ?? null,
     shareId: app.shareId,
     shareProtected: (app.sharePassword ?? '') !== '',
+    createdBy: app.createdBy ?? null,
     createdAt: iso(app.createdAt),
     updatedAt: iso(app.updatedAt),
     buildCount: builds.length,
     downloadCount: builds.reduce((sum, b) => sum + (b.downloadCount ?? 0), 0),
     latestBuild: builds.length > 0 ? buildToDto(builds[0]) : null,
+  }
+}
+
+export function userToAdminDto(user: User) {
+  return {
+    id: user.id,
+    username: user.username,
+    role: user.role === 'admin' ? ('admin' as const) : ('member' as const),
+    disabled: Boolean(user.disabled),
+    createdAt: iso(user.createdAt),
   }
 }
 

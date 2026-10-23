@@ -55,6 +55,10 @@ export class Build {
   @Column()
   storedName: string
 
+  // v3：上传者用户名快照（null = 旧数据）
+  @Column({ type: 'text', nullable: true })
+  createdBy: string | null
+
   @CreateDateColumn()
   createdAt: Date
 }

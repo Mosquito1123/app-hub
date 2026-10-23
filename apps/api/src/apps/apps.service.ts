@@ -62,7 +62,10 @@ export class AppsService {
     return apps.map(appToItem)
   }
 
-  async create(body: { name?: string; bundleId?: string; description?: string }) {
+  async create(
+    body: { name?: string; bundleId?: string; description?: string },
+    createdBy?: string,
+  ) {
     if (!body?.name || !body?.bundleId) {
       throw new BadRequestException('name 和 bundleId 必填')
     }
@@ -77,6 +80,7 @@ export class AppsService {
             bundleId: body.bundleId,
             description: body.description ?? null,
             shareId: genShareId(),
+            createdBy: createdBy || null,
           }),
         )
         break

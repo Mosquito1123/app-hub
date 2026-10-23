@@ -9,6 +9,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      # 开放注册：0 / false / off / no 关闭
+      REGISTER_ENABLED: ${REGISTER_ENABLED:-1}
       STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
       ## S3 存储（STORAGE_DRIVER=s3 时启用）
       # S3_ENDPOINT: https://s3.example.com

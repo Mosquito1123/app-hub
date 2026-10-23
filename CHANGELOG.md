@@ -7,7 +7,7 @@
 
 ### Added
 
-- 文档：v3 账号系统接口契约（`docs/API.md`）。开放注册与运维开关 `REGISTER_ENABLED`（契约默认开启）、`admin` / `member` 两种角色、应用全员共享、创建者留痕。仅有契约：注册、改密、用户管理接口和 `/users` 页面都还没有实现，运行中的 API 也不读取 `REGISTER_ENABLED`。
+- v3 账号系统：开放注册由 `REGISTER_ENABLED` 控制（默认开启；`0` / `false` / `off` / `no` 关闭）。关闭时 `GET /api/auth/config` 返回 `registerEnabled: false`，`POST /api/auth/register` 返回 403，登录页隐藏注册入口。角色为 `admin` / `member`，JWT 携带 `role`，鉴权以数据库中的当前角色为准。`/api/users` 仅 admin（列表、添加、改角色、禁用、重置密码、删除；不能改自己的角色和禁用状态，不能删除自己）。登录用户可修改自己的密码；禁用账号登录返回 403，已签发的令牌随后失效。应用与构建增加 `createdBy` 用户名快照，应用仍全员共享。前端为左右分栏登录/注册，以及 `/users` 管理页。
 - 仓库说明：补充 MIT `LICENSE`、新人可照做的 `README`、本更新日志、`.env.example` 与 `CONTRIBUTING.md`。仓库原先没有声明许可证，因此采用 MIT。
 
 ## [0.1.0] - 2026-10-23

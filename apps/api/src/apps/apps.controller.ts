@@ -18,6 +18,7 @@ import { FileInterceptor } from '@nestjs/platform-express'
 import { diskStorage } from 'multer'
 import { AppsService } from './apps.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { CurrentUser, type AuthUser } from '../auth/current-user.decorator'
 import { ICONS_DIR } from '../config'
 import { ICON_EXTS, getFileExt, randomFileName } from '../utils/file.util'
 
@@ -34,8 +35,11 @@ export class AppsController {
   }
 
   @Post()
-  create(@Body() body: { name?: string; bundleId?: string; description?: string }) {
-    return this.appsService.create(body)
+  create(
+    @Body() body: { name?: string; bundleId?: string; description?: string },
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.appsService.create(body, user?.username)
   }
 
   @Get(':id')

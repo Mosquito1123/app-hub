@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
 import { ArrowLeft, Copy, ImagePlus, LoaderCircle, Pencil, Trash2, CloudUpload } from 'lucide-vue-next'
+import AppHeader from '@/components/AppHeader.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -292,16 +293,16 @@ async function confirmDeleteBuild() {
 
 <template>
   <div class="min-h-screen">
-    <header class="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-      <div class="mx-auto flex h-14 max-w-4xl items-center px-4">
+    <AppHeader max-width-class="max-w-4xl">
+      <template #leading>
         <Button variant="ghost" size="sm" as-child>
           <router-link to="/">
             <ArrowLeft />
             返回列表
           </router-link>
         </Button>
-      </div>
-    </header>
+      </template>
+    </AppHeader>
 
     <main class="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <p v-if="loading" class="mt-16 text-center text-sm text-muted-foreground">加载中…</p>
@@ -338,6 +339,9 @@ async function confirmDeleteBuild() {
                 <div class="min-w-0">
                   <h1 class="truncate text-2xl font-bold">{{ app.name }}</h1>
                   <p class="mt-1 break-all text-sm text-muted-foreground">{{ app.bundleId }}</p>
+                  <p v-if="app.createdBy" class="mt-1 text-xs text-muted-foreground">
+                    创建者 {{ app.createdBy }}
+                  </p>
                 </div>
                 <div class="flex shrink-0 items-center gap-2">
                   <Button variant="outline" size="sm" @click="openEdit">
@@ -576,7 +580,8 @@ async function confirmDeleteBuild() {
                   </TableCell>
                   <TableCell>{{ b.downloadCount }}</TableCell>
                   <TableCell class="whitespace-nowrap text-muted-foreground">
-                    {{ formatDate(b.createdAt) }}
+                    <p>{{ formatDate(b.createdAt) }}</p>
+                    <p v-if="b.createdBy" class="text-xs">{{ b.createdBy }}</p>
                   </TableCell>
                   <TableCell class="text-right">
                     <Button

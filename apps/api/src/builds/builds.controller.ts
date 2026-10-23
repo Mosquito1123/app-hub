@@ -15,6 +15,7 @@ import { FileInterceptor } from '@nestjs/platform-express'
 import { diskStorage } from 'multer'
 import { BuildsService } from './builds.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { CurrentUser, type AuthUser } from '../auth/current-user.decorator'
 import { BUILDS_DIR } from '../config'
 import { BUILD_EXTS, getFileExt, randomFileName } from '../utils/file.util'
 
@@ -53,8 +54,9 @@ export class BuildsController {
       channel?: string
       releaseNotes?: string
     },
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.buildsService.create(id, file, body)
+    return this.buildsService.create(id, file, body, user?.username)
   }
 
   @Delete('builds/:id')
