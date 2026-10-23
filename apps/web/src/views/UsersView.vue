@@ -29,8 +29,9 @@ const auth = useAuthStore()
 const { toast } = useToast()
 
 const users = ref<UserAdmin[]>([])
-const loading = ref(true)
-const forbidden = ref(false)
+// 路由进来时角色已经对齐；member 首屏直接显示 403，避免先闪出管理表格
+const forbidden = ref(!auth.isAdmin)
+const loading = ref(auth.isAdmin)
 
 const createOpen = ref(false)
 const creating = ref(false)
