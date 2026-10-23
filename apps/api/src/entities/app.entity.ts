@@ -31,6 +31,10 @@ export class App {
   @Column()
   shareId: string
 
+  // v2：分享密码（明文存储，永不出接口；null = 未设置）
+  @Column({ type: 'text', nullable: true })
+  sharePassword: string | null
+
   @CreateDateColumn()
   createdAt: Date
 

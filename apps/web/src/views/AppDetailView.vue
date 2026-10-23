@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
-import { ArrowLeft, Copy, LoaderCircle, Trash2, CloudUpload } from 'lucide-vue-next'
+import { ArrowLeft, Copy, ImagePlus, LoaderCircle, Pencil, Trash2, CloudUpload } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -26,10 +26,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import { deleteApp, deleteBuild, fetchApp, uploadBuild } from '@/api'
+import { deleteApp, deleteBuild, fetchApp, getAppStats, updateApp, uploadBuild, uploadIcon } from '@/api'
 import { absoluteUrl, copyText, formatBytes, formatDate, platformMeta } from '@/lib/utils'
 import { useToast } from '@/composables/useToast'
-import type { AppDetail, Build, Platform } from '@/types'
+import type { AppDetail, AppStats, Build, Platform } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -46,11 +46,24 @@ async function load() {
   try {
     app.value = await fetchApp(String(route.params.id))
     genShareQr()
+    loadStats()
   } catch {
     toast({ title: '应用加载失败', variant: 'destructive' })
     router.replace('/')
   } finally {
     loading.value = false
+  }
+}
+
+// 下载统计
+const stats = ref<AppStats | null>(null)
+const dailyMax = computed(() => Math.max(1, ...(stats.value?.daily.map((d) => d.count) ?? [])))
+
+async function loadStats() {
+  try {
+    stats.value = await getAppStats(String(route.params.id))
+  } catch {
+    stats.value = null
   }
 }
 
@@ -73,6 +86,105 @@ async function copyLink(text: string) {
     toast({ title: '已复制到剪贴板' })
   } catch {
     toast({ title: '复制失败，请手动复制', variant: 'destructive' })
+  }
+}
+
+// 更换图标
+const iconInput = ref<HTMLInputElement>()
+const uploadingIcon = ref(false)
+
+function pickIcon(files: FileList | null) {
+  const f = files?.[0]
+  if (f) void submitIcon(f)
+  if (iconInput.value) iconInput.value.value = ''
+}
+
+async function submitIcon(f: File) {
+  if (!app.value) return
+  uploadingIcon.value = true
+  try {
+    await uploadIcon(app.value.id, f)
+    toast({ title: '图标已更新' })
+    await load()
+  } catch (e: any) {
+    const msg = e?.response?.data?.message
+    toast({
+      title: '图标上传失败',
+      description: Array.isArray(msg) ? msg.join('，') : msg,
+      variant: 'destructive',
+    })
+  } finally {
+    uploadingIcon.value = false
+  }
+}
+
+// 编辑应用
+const editOpen = ref(false)
+const savingApp = ref(false)
+const editForm = reactive({ name: '', description: '' })
+
+function openEdit() {
+  if (!app.value) return
+  editForm.name = app.value.name
+  editForm.description = app.value.description ?? ''
+  editOpen.value = true
+}
+
+async function submitEdit() {
+  if (!app.value) return
+  const name = editForm.name.trim()
+  if (!name) {
+    toast({ title: '请填写应用名称', variant: 'destructive' })
+    return
+  }
+  savingApp.value = true
+  try {
+    await updateApp(app.value.id, { name, description: editForm.description.trim() })
+    editOpen.value = false
+    toast({ title: '已保存' })
+    await load()
+  } catch {
+    toast({ title: '保存失败', variant: 'destructive' })
+  } finally {
+    savingApp.value = false
+  }
+}
+
+// 分享密码（密码值接口不回传，输入框永远为空）
+const sharePassword = ref('')
+const savingPassword = ref(false)
+
+async function saveSharePassword() {
+  if (!app.value) return
+  const pwd = sharePassword.value.trim()
+  if (!pwd) {
+    toast({ title: '请输入密码', variant: 'destructive' })
+    return
+  }
+  savingPassword.value = true
+  try {
+    await updateApp(app.value.id, { sharePassword: pwd })
+    sharePassword.value = ''
+    toast({ title: '分享密码已设置' })
+    await load()
+  } catch {
+    toast({ title: '设置失败', variant: 'destructive' })
+  } finally {
+    savingPassword.value = false
+  }
+}
+
+async function clearSharePassword() {
+  if (!app.value) return
+  savingPassword.value = true
+  try {
+    await updateApp(app.value.id, { sharePassword: '' })
+    toast({ title: '分享密码已清除' })
+    await load()
+  } catch {
+    toast({ title: '清除失败', variant: 'destructive' })
+  } finally {
+    savingPassword.value = false
   }
 }
 
@@ -199,10 +311,27 @@ async function confirmDeleteBuild() {
         <Card>
           <CardContent class="flex flex-col gap-4 p-6 sm:flex-row sm:items-start">
             <div
-              class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 text-2xl font-bold text-primary"
+              class="group relative h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded-2xl bg-primary/10 text-2xl font-bold text-primary"
+              @click="iconInput?.click()"
             >
               <img v-if="app.iconUrl" :src="app.iconUrl" class="h-full w-full object-cover" alt="" />
               <span v-else>{{ app.name.charAt(0).toUpperCase() }}</span>
+              <div
+                class="absolute inset-0 hidden items-center justify-center bg-black/40 text-xs font-medium text-white group-hover:flex"
+              >
+                <LoaderCircle v-if="uploadingIcon" class="h-5 w-5 animate-spin" />
+                <span v-else class="flex items-center gap-1">
+                  <ImagePlus class="h-4 w-4" />
+                  更换图标
+                </span>
+              </div>
+              <input
+                ref="iconInput"
+                type="file"
+                class="hidden"
+                accept=".png,.jpg,.jpeg,.svg"
+                @change="pickIcon(($event.target as HTMLInputElement).files)"
+              />
             </div>
             <div class="min-w-0 flex-1">
               <div class="flex items-start justify-between gap-3">
@@ -210,15 +339,21 @@ async function confirmDeleteBuild() {
                   <h1 class="truncate text-2xl font-bold">{{ app.name }}</h1>
                   <p class="mt-1 break-all text-sm text-muted-foreground">{{ app.bundleId }}</p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="shrink-0 text-destructive hover:text-destructive"
-                  @click="deleteAppOpen = true"
-                >
-                  <Trash2 />
-                  删除应用
-                </Button>
+                <div class="flex shrink-0 items-center gap-2">
+                  <Button variant="outline" size="sm" @click="openEdit">
+                    <Pencil />
+                    编辑
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="text-destructive hover:text-destructive"
+                    @click="deleteAppOpen = true"
+                  >
+                    <Trash2 />
+                    删除应用
+                  </Button>
+                </div>
               </div>
               <p v-if="app.description" class="mt-3 text-sm">{{ app.description }}</p>
               <p class="mt-3 text-xs text-muted-foreground">
@@ -230,19 +365,100 @@ async function confirmDeleteBuild() {
 
         <!-- 分享区 -->
         <Card>
-          <CardContent class="flex items-center gap-6 p-6">
-            <div class="min-w-0 flex-1">
-              <h2 class="font-semibold">分享链接</h2>
-              <p class="mt-1 break-all text-sm text-muted-foreground">{{ shareUrl }}</p>
-              <Button variant="outline" size="sm" class="mt-3" @click="copyLink(shareUrl)">
-                <Copy />
-                复制链接
-              </Button>
+          <CardContent class="p-6">
+            <div class="flex items-start gap-6">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <h2 class="font-semibold">分享链接</h2>
+                  <Badge
+                    :class="
+                      app.shareProtected ? 'bg-amber-100 text-amber-700' : 'bg-muted text-muted-foreground'
+                    "
+                  >
+                    {{ app.shareProtected ? '已开启密码' : '无密码' }}
+                  </Badge>
+                </div>
+                <p class="mt-1 break-all text-sm text-muted-foreground">{{ shareUrl }}</p>
+                <Button variant="outline" size="sm" class="mt-3" @click="copyLink(shareUrl)">
+                  <Copy />
+                  复制链接
+                </Button>
+              </div>
+              <div v-if="shareQr" class="hidden shrink-0 text-center sm:block">
+                <img :src="shareQr" class="rounded-lg border bg-white p-1" width="112" height="112" alt="分享二维码" />
+                <p class="mt-1 text-xs text-muted-foreground">手机扫码访问</p>
+              </div>
             </div>
-            <div v-if="shareQr" class="hidden shrink-0 text-center sm:block">
-              <img :src="shareQr" class="rounded-lg border bg-white p-1" width="112" height="112" alt="分享二维码" />
-              <p class="mt-1 text-xs text-muted-foreground">手机扫码访问</p>
+            <div class="mt-5 flex flex-wrap items-end gap-3 border-t pt-5">
+              <div class="min-w-48 flex-1 space-y-2">
+                <Label for="share-password">访问密码</Label>
+                <Input
+                  id="share-password"
+                  v-model="sharePassword"
+                  type="text"
+                  placeholder="设置密码"
+                  autocomplete="new-password"
+                />
+              </div>
+              <div class="flex gap-2">
+                <Button
+                  size="sm"
+                  :disabled="savingPassword || !sharePassword.trim()"
+                  @click="saveSharePassword"
+                >
+                  <LoaderCircle v-if="savingPassword" class="animate-spin" />
+                  保存
+                </Button>
+                <Button
+                  v-if="app.shareProtected"
+                  size="sm"
+                  variant="outline"
+                  :disabled="savingPassword"
+                  @click="clearSharePassword"
+                >
+                  清除
+                </Button>
+              </div>
             </div>
+            <p class="mt-2 text-xs text-muted-foreground">
+              设置后，访问分享链接需输入密码；密码不会被回传显示，可输入新值覆盖或点击清除。
+            </p>
+          </CardContent>
+        </Card>
+
+        <!-- 下载统计 -->
+        <Card v-if="stats">
+          <CardContent class="p-6">
+            <h2 class="font-semibold">下载统计</h2>
+            <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div>
+                <p class="text-2xl font-bold">{{ stats.total }}</p>
+                <p class="mt-0.5 text-xs text-muted-foreground">累计下载</p>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-green-600">{{ stats.byPlatform.android }}</p>
+                <p class="mt-0.5 text-xs text-muted-foreground">Android</p>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-blue-600">{{ stats.byPlatform.ios }}</p>
+                <p class="mt-0.5 text-xs text-muted-foreground">iOS</p>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-orange-600">{{ stats.byPlatform.harmony }}</p>
+                <p class="mt-0.5 text-xs text-muted-foreground">鸿蒙</p>
+              </div>
+            </div>
+            <div class="mt-6 flex h-24 items-end gap-[2px]">
+              <div
+                v-for="d in stats.daily"
+                :key="d.date"
+                class="min-h-[2px] flex-1 rounded-sm"
+                :class="d.count > 0 ? 'bg-indigo-500' : 'bg-muted'"
+                :style="{ height: `${(d.count / dailyMax) * 100}%` }"
+                :title="`${d.date}: ${d.count}`"
+              />
+            </div>
+            <p class="mt-2 text-xs text-muted-foreground">最近 30 天每日下载量</p>
           </CardContent>
         </Card>
 
@@ -388,6 +604,33 @@ async function confirmDeleteBuild() {
           </CardContent>
         </Card>
       </template>
+
+      <!-- 编辑应用 -->
+      <Dialog :open="editOpen" @update:open="(v: boolean) => (editOpen = v)">
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>编辑应用</DialogTitle>
+            <DialogDescription>修改应用名称和描述。</DialogDescription>
+          </DialogHeader>
+          <form class="space-y-4" @submit.prevent="submitEdit">
+            <div class="space-y-2">
+              <Label for="edit-name">应用名称</Label>
+              <Input id="edit-name" v-model="editForm.name" placeholder="如：Demo App" />
+            </div>
+            <div class="space-y-2">
+              <Label for="edit-desc">描述</Label>
+              <Textarea id="edit-desc" v-model="editForm.description" placeholder="应用简介" />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" @click="editOpen = false">取消</Button>
+              <Button type="submit" :disabled="savingApp">
+                <LoaderCircle v-if="savingApp" class="animate-spin" />
+                保存
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <!-- 删除应用确认 -->
       <Dialog :open="deleteAppOpen" @update:open="(v: boolean) => (deleteAppOpen = v)">

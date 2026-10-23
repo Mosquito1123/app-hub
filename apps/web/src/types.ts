@@ -30,6 +30,7 @@ export interface AppItem {
   description: string | null
   iconUrl: string | null // 相对路径：/uploads/icons/xxx.png
   shareId: string
+  shareProtected: boolean // v2：是否设置了分享密码（密码值永不出接口）
   createdAt: string
   updatedAt: string
   buildCount: number
@@ -49,4 +50,10 @@ export interface PublicApp {
 export interface LoginResponse {
   token: string
   user: User
+}
+
+export interface AppStats {
+  total: number
+  byPlatform: { android: number; ios: number; harmony: number }
+  daily: Array<{ date: string; count: number }> // 最近 30 天（含今天）升序，date 形如 "2026-10-23"
 }

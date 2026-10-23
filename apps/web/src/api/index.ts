@@ -3,6 +3,7 @@ import client from './client'
 import type {
   AppDetail,
   AppItem,
+  AppStats,
   Build,
   LoginResponse,
   Platform,
@@ -39,6 +40,26 @@ export async function deleteApp(id: string | number): Promise<void> {
   await client.delete(`/apps/${id}`)
 }
 
+export async function updateApp(
+  id: string | number,
+  payload: { name?: string; description?: string; sharePassword?: string },
+): Promise<AppItem> {
+  const { data } = await client.patch<AppItem>(`/apps/${id}`, payload)
+  return data
+}
+
+export async function uploadIcon(id: string | number, file: File): Promise<{ iconUrl: string }> {
+  const fd = new FormData()
+  fd.append('file', file)
+  const { data } = await client.post<{ iconUrl: string }>(`/apps/${id}/icon`, fd)
+  return data
+}
+
+export async function getAppStats(id: string | number): Promise<AppStats> {
+  const { data } = await client.get<AppStats>(`/apps/${id}/stats`)
+  return data
+}
+
 export async function uploadBuild(
   appId: string | number,
   payload: {
@@ -65,7 +86,9 @@ export async function deleteBuild(id: number): Promise<void> {
   await client.delete(`/builds/${id}`)
 }
 
-export async function fetchPublicApp(shareId: string): Promise<PublicApp> {
-  const { data } = await client.get<PublicApp>(`/public/apps/${shareId}`)
+export async function fetchPublicApp(shareId: string, password?: string): Promise<PublicApp> {
+  const { data } = await client.get<PublicApp>(`/public/apps/${shareId}`, {
+    params: password ? { password } : undefined,
+  })
   return data
 }

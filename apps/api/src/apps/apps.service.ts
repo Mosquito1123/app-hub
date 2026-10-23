@@ -7,15 +7,22 @@ import {
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { randomBytes } from 'crypto'
-import * as path from 'path'
 import { App } from '../entities/app.entity'
 import { Build, PLATFORMS, Platform } from '../entities/build.entity'
+import { DownloadLog } from '../entities/download-log.entity'
 import { appToItem, buildsDesc, buildToDto } from '../serialize'
-import { BUILDS_DIR, ICONS_DIR } from '../config'
-import { safeUnlink } from '../utils/file.util'
+import { StorageService } from '../storage/storage.service'
 
 function genShareId(): string {
   return randomBytes(4).toString('hex').slice(0, 6) // 6 位 [a-f0-9] ⊂ [a-z0-9]
+}
+
+// 本地日期 "YYYY-MM-DD"（统计按天聚合，与服务器时区一致）
+function ymd(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 @Injectable()
@@ -23,6 +30,8 @@ export class AppsService {
   constructor(
     @InjectRepository(App) private readonly apps: Repository<App>,
     @InjectRepository(Build) private readonly builds: Repository<Build>,
+    @InjectRepository(DownloadLog) private readonly downloadLogs: Repository<DownloadLog>,
+    private readonly storage: StorageService,
   ) {}
 
   private async loadWithBuilds(id: number): Promise<App> {
@@ -83,23 +92,49 @@ export class AppsService {
     return { ...appToItem(app), builds: buildsDesc(app).map(buildToDto) }
   }
 
-  async update(id: number, body: { name?: string; description?: string }) {
+  async update(id: number, body: { name?: string; description?: string; sharePassword?: string }) {
     const app = await this.loadWithBuilds(id)
     if (body?.name !== undefined) app.name = body.name
     if (body?.description !== undefined) app.description = body.description
+    // v2：sharePassword 非空 = 设置，"" = 清除；密码值不回传（appToItem 只带 shareProtected）
+    if (body?.sharePassword !== undefined) {
+      app.sharePassword = body.sharePassword === '' ? null : body.sharePassword
+    }
     await this.apps.save(app)
     return appToItem(await this.loadWithBuilds(id))
   }
 
+  // v2：下载统计（基于 DownloadLog；daily 为最近 30 天含今天，升序补零）
+  async stats(id: number) {
+    const app = await this.apps.findOne({ where: { id } })
+    if (!app) throw new NotFoundException('应用不存在')
+    const logs = await this.downloadLogs.find({ where: { appId: id } })
+    const byPlatform = { android: 0, ios: 0, harmony: 0 }
+    const dailyCount = new Map<string, number>()
+    for (const log of logs) {
+      if (log.platform in byPlatform) byPlatform[log.platform] += 1
+      const date = ymd(log.createdAt instanceof Date ? log.createdAt : new Date(log.createdAt))
+      dailyCount.set(date, (dailyCount.get(date) ?? 0) + 1)
+    }
+    const daily: Array<{ date: string; count: number }> = []
+    const now = new Date()
+    for (let i = 29; i >= 0; i--) {
+      const date = ymd(new Date(now.getTime() - i * 24 * 60 * 60 * 1000))
+      daily.push({ date, count: dailyCount.get(date) ?? 0 })
+    }
+    return { total: logs.length, byPlatform, daily }
+  }
+
   async remove(id: number) {
     const app = await this.loadWithBuilds(id)
-    // 手动删除磁盘文件（DB 级联由外键处理，这里兜底删构建记录）
+    // 手动删除存储文件（DB 级联由外键处理，这里兜底删构建记录与下载日志）
     for (const b of app.builds ?? []) {
-      safeUnlink(path.join(BUILDS_DIR, b.storedName))
+      await this.storage.deleteBuild(b.storedName)
     }
     if (app.iconUrl) {
-      safeUnlink(path.join(ICONS_DIR, path.basename(app.iconUrl)))
+      await this.storage.deleteIcon(app.iconUrl)
     }
+    await this.downloadLogs.delete({ appId: app.id })
     await this.builds.delete({ appId: app.id })
     await this.apps.remove(app)
   }
@@ -107,10 +142,12 @@ export class AppsService {
   async uploadIcon(id: number, file?: Express.Multer.File) {
     if (!file) throw new BadRequestException('缺少文件')
     const app = await this.loadWithBuilds(id)
+    // 先转存新图标（s3 模式 multer 临时文件在成功后清理），再删旧图标
+    const iconUrl = await this.storage.saveIcon(file.filename)
     if (app.iconUrl) {
-      safeUnlink(path.join(ICONS_DIR, path.basename(app.iconUrl)))
+      await this.storage.deleteIcon(app.iconUrl)
     }
-    app.iconUrl = `/uploads/icons/${file.filename}`
+    app.iconUrl = iconUrl
     await this.apps.save(app)
     return { iconUrl: app.iconUrl }
   }

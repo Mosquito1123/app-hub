@@ -10,6 +10,7 @@ import { App } from '../entities/app.entity'
 import { Build, PLATFORMS, Platform } from '../entities/build.entity'
 import { buildToDto } from '../serialize'
 import { BUILDS_DIR } from '../config'
+import { StorageService } from '../storage/storage.service'
 import { getFileExt, safeUnlink } from '../utils/file.util'
 
 @Injectable()
@@ -17,6 +18,7 @@ export class BuildsService {
   constructor(
     @InjectRepository(App) private readonly apps: Repository<App>,
     @InjectRepository(Build) private readonly builds: Repository<Build>,
+    private readonly storage: StorageService,
   ) {}
 
   async create(
@@ -44,6 +46,8 @@ export class BuildsService {
       safeUnlink(path.join(BUILDS_DIR, file.filename))
       throw new BadRequestException('version 必填')
     }
+    // v2：经存储驱动落库（local 保持原文件名；s3 转存后删除本地临时文件，storedName 存对象 key）
+    const storedName = await this.storage.saveBuild(file.filename)
     const build = await this.builds.save(
       this.builds.create({
         appId: app.id,
@@ -55,7 +59,7 @@ export class BuildsService {
         fileName: file.originalname,
         fileExt: getFileExt(file.originalname),
         fileSize: file.size,
-        storedName: file.filename,
+        storedName,
       }),
     )
     return buildToDto(build)
@@ -64,7 +68,7 @@ export class BuildsService {
   async remove(id: number) {
     const build = await this.builds.findOne({ where: { id } })
     if (!build) throw new NotFoundException('构建不存在')
-    safeUnlink(path.join(BUILDS_DIR, build.storedName))
+    await this.storage.deleteBuild(build.storedName)
     await this.builds.delete({ id })
   }
 }

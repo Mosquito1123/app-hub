@@ -36,6 +36,7 @@ export function appToItem(app: App) {
     description: app.description ?? null,
     iconUrl: app.iconUrl ?? null,
     shareId: app.shareId,
+    shareProtected: (app.sharePassword ?? '') !== '',
     createdAt: iso(app.createdAt),
     updatedAt: iso(app.updatedAt),
     buildCount: builds.length,

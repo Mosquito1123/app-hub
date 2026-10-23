@@ -38,6 +38,7 @@
 | M1 前端 | Agent C | Vue3 全部页面（与后端并行） | ✅ |
 | M2 集成 | 本人 + Agent D | pnpm install、构建、API 冒烟 28/28、浏览器端到端验证 | ✅ |
 | M3 收尾 | 本人 | 修复 SPA 首页 404 bug、截图、commit | ✅ |
+| V2 功能 | Agent B2+C2 | 图标入口、应用编辑、分享密码、下载统计、S3 存储、Docker | ✅ |
 
 ## 约定
 

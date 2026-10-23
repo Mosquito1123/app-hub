@@ -46,9 +46,15 @@ export class AppsController {
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { name?: string; description?: string },
+    @Body() body: { name?: string; description?: string; sharePassword?: string },
   ) {
     return this.appsService.update(id, body)
+  }
+
+  // v2：下载统计
+  @Get(':id/stats')
+  stats(@Param('id', ParseIntPipe) id: number) {
+    return this.appsService.stats(id)
   }
 
   @Delete(':id')

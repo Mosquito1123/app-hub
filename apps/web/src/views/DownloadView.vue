@@ -2,10 +2,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import QRCode from 'qrcode'
-import { Download } from 'lucide-vue-next'
+import { Download, KeyRound, LoaderCircle } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { fetchPublicApp } from '@/api'
 import { absoluteUrl, formatDate, platformMeta } from '@/lib/utils'
 import type { Build, PublicApp } from '@/types'
@@ -14,32 +15,69 @@ const route = useRoute()
 const data = ref<PublicApp | null>(null)
 const notFound = ref(false)
 const loading = ref(true)
+const needPassword = ref(false)
+const wrongPassword = ref(false)
+const checking = ref(false)
+const pwdInput = ref('')
+// URL 自带 ?password= 时自动带上请求（分享场景），之后以内存变量维护，不落 localStorage
+const q = route.query.password
+const password = ref(typeof q === 'string' ? q : '')
 const pageQr = ref('')
 
 const latest = computed(() => data.value?.builds[0] ?? null)
 const isHttps = window.location.protocol === 'https:'
 
-onMounted(async () => {
+onMounted(load)
+
+async function load() {
+  loading.value = true
   try {
-    data.value = await fetchPublicApp(String(route.params.shareId))
+    data.value = await fetchPublicApp(String(route.params.shareId), password.value || undefined)
+    needPassword.value = false
+    wrongPassword.value = false
     try {
-      pageQr.value = await QRCode.toDataURL(window.location.href, { width: 144, margin: 1 })
+      pageQr.value = await QRCode.toDataURL(pageUrl(), { width: 144, margin: 1 })
     } catch {
       pageQr.value = ''
     }
-  } catch {
-    notFound.value = true
+  } catch (e: any) {
+    if (e?.response?.status === 403) {
+      needPassword.value = true
+      data.value = null
+    } else {
+      notFound.value = true
+    }
   } finally {
     loading.value = false
   }
-})
+}
+
+async function submitPassword() {
+  const pwd = pwdInput.value.trim()
+  if (!pwd) return
+  password.value = pwd
+  checking.value = true
+  await load()
+  checking.value = false
+  wrongPassword.value = needPassword.value
+}
+
+/** 受保护应用的页面/下载链接都带上 ?password= */
+function withPassword(url: string): string {
+  if (!password.value) return url
+  return `${url}${url.includes('?') ? '&' : '?'}password=${encodeURIComponent(password.value)}`
+}
+
+function pageUrl() {
+  return withPassword(window.location.href)
+}
 
 function downloadUrl(b: Build) {
-  return absoluteUrl(b.downloadUrl)
+  return withPassword(absoluteUrl(b.downloadUrl))
 }
 
 function itmsUrl(b: Build) {
-  const manifest = absoluteUrl(`/api/public/builds/${b.id}/ios-manifest.plist`)
+  const manifest = withPassword(absoluteUrl(`/api/public/builds/${b.id}/ios-manifest.plist`))
   return `itms-services://?action=download-manifest&url=${encodeURIComponent(manifest)}`
 }
 </script>
@@ -56,6 +94,29 @@ function itmsUrl(b: Build) {
           <p class="mt-2 text-sm text-muted-foreground">
             链接可能已失效或应用已被删除，请联系分享者获取新链接。
           </p>
+        </CardContent>
+      </Card>
+
+      <!-- 403：需要访问密码 -->
+      <Card v-else-if="needPassword">
+        <CardContent class="p-8">
+          <p class="text-lg font-semibold">此分享已开启访问密码</p>
+          <p class="mt-2 text-sm text-muted-foreground">请输入分享者提供的访问密码以查看和下载。</p>
+          <form class="mt-4 flex gap-2" @submit.prevent="submitPassword">
+            <Input
+              v-model="pwdInput"
+              type="text"
+              placeholder="访问密码"
+              autocomplete="off"
+              class="flex-1"
+            />
+            <Button type="submit" :disabled="checking || !pwdInput.trim()">
+              <KeyRound v-if="!checking" />
+              <LoaderCircle v-else class="animate-spin" />
+              {{ checking ? '验证中…' : '查看' }}
+            </Button>
+          </form>
+          <p v-if="wrongPassword" class="mt-2 text-sm text-destructive">密码错误，请重试</p>
         </CardContent>
       </Card>
 
