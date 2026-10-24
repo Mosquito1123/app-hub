@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { KeyRound, LoaderCircle, Package } from 'lucide-vue-next'
-import { Badge } from '@/components/ui/badge'
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { KeyRound, LoaderCircle, Menu } from 'lucide-vue-next'
+import AdminSidebar from '@/components/admin/AdminSidebar.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,18 +16,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { changePassword } from '@/api'
 import { errorMessage, passwordOk } from '@/lib/account'
-import { cn } from '@/lib/utils'
 import { useToast } from '@/composables/useToast'
-import { useAuthStore } from '@/stores/auth'
-
-withDefaults(defineProps<{ maxWidthClass?: string }>(), {
-  maxWidthClass: 'max-w-5xl',
-})
 
 const route = useRoute()
-const router = useRouter()
-const auth = useAuthStore()
 const { toast } = useToast()
+
+const title = computed(() => String(route.meta.title ?? '管理台'))
+const mobileOpen = ref(false)
 
 const pwdOpen = ref(false)
 const saving = ref(false)
@@ -74,48 +69,45 @@ async function submitPassword() {
     saving.value = false
   }
 }
-
-function logout() {
-  auth.logout()
-  router.replace('/login')
-}
-
-function navClass(active: boolean) {
-  return cn(
-    'rounded-md px-2 py-1 text-sm hover:bg-accent',
-    active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground',
-  )
-}
 </script>
 
 <template>
-  <header class="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-    <div :class="cn('mx-auto flex h-14 items-center justify-between gap-3 px-4', maxWidthClass)">
-      <div class="flex min-w-0 items-center gap-3">
-        <slot name="leading">
-          <router-link to="/" class="flex shrink-0 items-center gap-2 text-lg font-bold">
-            <Package class="h-5 w-5 text-primary" />
-            AppHub
-          </router-link>
-          <nav class="flex items-center gap-1">
-            <router-link to="/" :class="navClass(route.name === 'apps')">应用</router-link>
-            <router-link v-if="auth.isAdmin" to="/users" :class="navClass(route.name === 'users')">
-              用户
-            </router-link>
-          </nav>
-        </slot>
+  <div class="min-h-screen lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+    <aside class="sticky top-0 hidden h-screen border-r lg:block">
+      <AdminSidebar />
+    </aside>
+
+    <!-- 移动端抽屉 -->
+    <div v-if="mobileOpen" class="fixed inset-0 z-50 lg:hidden">
+      <div class="absolute inset-0 bg-black/40" @click="mobileOpen = false" />
+      <div class="absolute inset-y-0 left-0 w-64 border-r bg-card shadow-xl">
+        <AdminSidebar mobile @close="mobileOpen = false" />
       </div>
-      <div class="flex shrink-0 items-center gap-1 text-sm">
-        <span class="hidden max-w-28 truncate text-muted-foreground sm:inline">
-          {{ auth.user?.username }}
-        </span>
-        <Badge v-if="auth.role" variant="secondary">{{ auth.role }}</Badge>
+    </div>
+
+    <div class="flex min-h-screen min-w-0 flex-col">
+      <header class="sticky top-0 z-40 flex h-16 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
+        <Button
+          variant="ghost"
+          size="icon"
+          class="lg:hidden"
+          aria-label="打开菜单"
+          @click="mobileOpen = true"
+        >
+          <Menu />
+        </Button>
+        <div class="min-w-0 flex-1">
+          <h1 class="truncate text-base font-semibold">{{ title }}</h1>
+        </div>
         <Button variant="ghost" size="sm" @click="onPwdOpen(true)">
           <KeyRound />
           <span class="hidden sm:inline">修改密码</span>
         </Button>
-        <Button variant="ghost" size="sm" @click="logout">退出</Button>
-      </div>
+      </header>
+
+      <main class="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <RouterView />
+      </main>
     </div>
 
     <Dialog :open="pwdOpen" @update:open="onPwdOpen">
@@ -166,5 +158,5 @@ function navClass(active: boolean) {
         </form>
       </DialogContent>
     </Dialog>
-  </header>
+  </div>
 </template>

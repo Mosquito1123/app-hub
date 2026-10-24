@@ -2,7 +2,6 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { LoaderCircle, ShieldOff, Trash2, UserPlus } from 'lucide-vue-next'
-import AppHeader from '@/components/AppHeader.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -158,15 +157,12 @@ async function onDelete(u: UserAdmin) {
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <AppHeader />
-
-    <main class="mx-auto max-w-5xl px-4 py-8">
+  <div class="mx-auto max-w-6xl">
       <div v-if="forbidden" class="mt-16 rounded-xl border bg-card p-8 text-center">
         <ShieldOff class="mx-auto h-8 w-8 text-muted-foreground/50" />
         <p class="mt-3 text-base font-medium">403 无权限访问</p>
         <p class="mt-1 text-sm text-muted-foreground">用户管理仅管理员可用。</p>
-        <Button variant="outline" class="mt-4" @click="router.push('/')">返回首页</Button>
+        <Button variant="outline" class="mt-4" @click="router.push('/admin')">返回应用列表</Button>
       </div>
 
       <template v-else>
@@ -289,7 +285,6 @@ async function onDelete(u: UserAdmin) {
           </div>
         </div>
       </template>
-    </main>
 
     <Dialog :open="resetFor !== null" @update:open="onResetOpen">
       <DialogContent>

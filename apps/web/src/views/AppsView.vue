@@ -2,7 +2,6 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Download, LoaderCircle, Package, Plus } from 'lucide-vue-next'
-import AppHeader from '@/components/AppHeader.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -82,7 +81,7 @@ async function submitCreate() {
     createOpen.value = false
     form.value = { name: '', bundleId: '', description: '' }
     toast({ title: '创建成功' })
-    router.push(`/apps/${app.id}`)
+    router.push(`/admin/apps/${app.id}`)
   } catch (e: any) {
     const msg = e?.response?.data?.message
     toast({
@@ -97,11 +96,8 @@ async function submitCreate() {
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <AppHeader />
-
-    <main class="mx-auto max-w-5xl px-4 py-8">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+  <div class="mx-auto max-w-6xl">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Input v-model="query" placeholder="搜索应用名称或 Bundle ID" class="sm:max-w-64" />
         <div class="flex flex-wrap gap-1">
           <Button
@@ -163,7 +159,7 @@ async function submitCreate() {
           v-for="app in apps"
           :key="app.id"
           class="rounded-xl border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary/40"
-          @click="router.push(`/apps/${app.id}`)"
+          @click="router.push(`/admin/apps/${app.id}`)"
         >
           <div class="flex items-start gap-4">
             <div
@@ -196,7 +192,6 @@ async function submitCreate() {
             <span class="shrink-0">{{ formatDate(app.updatedAt) }}</span>
           </div>
         </button>
-      </div>
-    </main>
+    </div>
   </div>
 </template>
