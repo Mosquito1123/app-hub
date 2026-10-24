@@ -3,7 +3,6 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
 import { ArrowLeft, Copy, ImagePlus, LoaderCircle, Pencil, Trash2, CloudUpload } from 'lucide-vue-next'
-import AppHeader from '@/components/AppHeader.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -50,7 +49,7 @@ async function load() {
     loadStats()
   } catch {
     toast({ title: '应用加载失败', variant: 'destructive' })
-    router.replace('/')
+    router.replace('/admin')
   } finally {
     loading.value = false
   }
@@ -199,7 +198,7 @@ async function confirmDeleteApp() {
   try {
     await deleteApp(app.value.id)
     toast({ title: '应用已删除' })
-    router.replace('/')
+    router.replace('/admin')
   } catch {
     toast({ title: '删除失败', variant: 'destructive' })
     deletingApp.value = false
@@ -292,20 +291,15 @@ async function confirmDeleteBuild() {
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <AppHeader max-width-class="max-w-4xl">
-      <template #leading>
-        <Button variant="ghost" size="sm" as-child>
-          <router-link to="/">
-            <ArrowLeft />
-            返回列表
-          </router-link>
-        </Button>
-      </template>
-    </AppHeader>
+  <div class="mx-auto max-w-5xl space-y-6">
+    <Button variant="ghost" size="sm" as-child class="-ml-2">
+      <router-link to="/admin">
+        <ArrowLeft />
+        返回列表
+      </router-link>
+    </Button>
 
-    <main class="mx-auto max-w-4xl space-y-6 px-4 py-8">
-      <p v-if="loading" class="mt-16 text-center text-sm text-muted-foreground">加载中…</p>
+    <p v-if="loading" class="mt-16 text-center text-sm text-muted-foreground">加载中…</p>
 
       <template v-else-if="app">
         <!-- 基本信息 -->
@@ -675,6 +669,5 @@ async function confirmDeleteBuild() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </main>
   </div>
 </template>

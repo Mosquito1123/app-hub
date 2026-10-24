@@ -86,12 +86,18 @@ async function onSubmit() {
     if (isRegister.value) {
       await auth.register(username.value.trim(), password.value)
       toast({ title: '注册成功', description: '已自动登录' })
-      router.replace('/')
+      router.replace('/admin')
     } else {
       await auth.login(username.value.trim(), password.value)
       const raw = route.query.redirect
-      const redirect = typeof raw === 'string' ? raw : '/'
-      router.replace(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
+      const redirect =
+        typeof raw === 'string' &&
+        raw.startsWith('/admin') &&
+        !raw.startsWith('//') &&
+        raw !== '/admin/login'
+          ? raw
+          : '/admin'
+      router.replace(redirect)
     }
   } catch (e: unknown) {
     error.value = mapError(e, isRegister.value)
@@ -123,9 +129,9 @@ function mapError(e: unknown, register: boolean): string {
         AppHub
       </div>
       <div>
-        <h1 class="text-3xl font-bold leading-snug">移动端应用内测分发平台</h1>
+        <h1 class="text-3xl font-bold leading-snug">AppHub 管理台</h1>
         <p class="mt-4 max-w-sm text-sm leading-relaxed text-primary-foreground/80">
-          上传构建包、生成分享链接，把内测安装包快速分发给测试用户。
+          上传构建包、生成分享链接，把内测安装包快速分发给测试用户。公开下载页始终保持独立，不带管理导航。
         </p>
         <div class="mt-6 flex gap-2">
           <Badge class="border-transparent bg-white/15 text-white">Android</Badge>
@@ -141,7 +147,7 @@ function mapError(e: unknown, register: boolean): string {
         <Package class="h-5 w-5 shrink-0 text-primary" />
         AppHub
         <span class="min-w-0 truncate text-xs font-normal text-muted-foreground">
-          移动端应用内测分发平台
+          管理台
         </span>
       </div>
 

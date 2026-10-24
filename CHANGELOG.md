@@ -10,6 +10,10 @@
 - v3 账号系统：开放注册由 `REGISTER_ENABLED` 控制（默认开启；`0` / `false` / `off` / `no` 关闭）。关闭时 `GET /api/auth/config` 返回 `registerEnabled: false`，`POST /api/auth/register` 返回 403，登录页隐藏注册入口。角色为 `admin` / `member`，JWT 携带 `role`，鉴权以数据库中的当前角色为准。`/api/users` 仅 admin（列表、添加、改角色、禁用、重置密码、删除；不能改自己的角色和禁用状态，不能删除自己）。登录用户可修改自己的密码；禁用账号登录返回 403，已签发的令牌随后失效。应用与构建增加 `createdBy` 用户名快照，应用仍全员共享。前端为左右分栏登录/注册，以及 `/users` 管理页。
 - 仓库说明：补充 MIT `LICENSE`、新人可照做的 `README`、本更新日志、`.env.example` 与 `CONTRIBUTING.md`。仓库原先没有声明许可证，因此采用 MIT。
 
+### Changed
+
+- 管理台软拆：登录、应用列表/详情、用户管理移到 `/admin/*`，共用侧栏 + 顶栏壳子；`/` 按登录状态跳转，公开门户只保留 `/d/:shareId`。旧路径 `/login`、`/apps/:id`、`/users` 保留重定向。API 契约与全员共享应用不变；生产 SPA fallback 已覆盖 `/admin/*`。
+
 ## [0.1.0] - 2026-10-23
 
 `0.1.0` 覆盖 2026-10-22 的首版与 2026-10-23 合入主干的 Docker、v2，版本号没有随 v2 递增。

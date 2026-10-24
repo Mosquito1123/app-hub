@@ -23,6 +23,7 @@ async function bootstrap() {
         return next()
       }
       // 防路径穿越：解析后必须仍在 webDist 内，且真实文件不存在时回退 index.html
+      // 回退覆盖 /admin/*、/d/* 等前端路由，API 与上传目录不在此处理
       const target = resolve(webDist, `.${req.path}`)
       if (!target.startsWith(webDist) || !existsSync(target)) {
         res.sendFile(join(webDist, 'index.html'))
